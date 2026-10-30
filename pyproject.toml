@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "editor-youtube-shorts"
+version = "1.0.0"
+description = "Editor de YouTube Shorts: cortes, recorte con borde blanco, tarjetas con logos y subtítulos (skill para Claude)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.26",
+  "scipy>=1.11",
+  "opencv-python-headless>=4.9",
+  "pillow>=10",
+  "soundfile>=0.12",
+  "mediapipe>=0.10.14",
+  "faster-whisper>=1.1",
+  "playwright>=1.45",
+]
+
+[project.scripts]
+shorts = "shorts.__main__:main"
+
+[tool.setuptools]
+packages = ["shorts", "shorts.overlay"]
+
+[tool.setuptools.package-data]
+"shorts.overlay" = ["*.js", "*.css"]

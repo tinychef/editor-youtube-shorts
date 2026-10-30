@@ -1,0 +1,30 @@
+{
+  "work": "../work/demo",
+  "output": "../out/demo.mp4",
+  "theme": "claro",
+  "captions": {
+    "emphasis": ["Claude", "Gemini", "NotebookLM", "gratis", "IA"],
+    "replace": [{"w": [15, 15], "text": "y"}, {"w": [30, 32], "text": "NotebookLM"}, {"w": [42, 43], "text": "IA"}]
+  },
+  "layout": [
+    {"at": 0, "mode": "full"},
+    {"at": "w:10", "mode": "sticker"},
+    {"at": "w:27", "mode": "popout", "outline": true},
+    {"at": "w:41", "mode": "sticker"}
+  ],
+  "zooms": [{"at": "w:21", "dur": 0.9, "scale": 1.1}],
+  "overlays": [
+    {"type": "hook", "at": 0, "until": "w:10", "lines": ["Deja de pagar", "por estas 3 apps de IA"]},
+    {"type": "logos", "at": "w:5", "until": "w:10", "items": [{"logo": "claude", "label": "Claude"}, {"logo": "googlegemini", "label": "Gemini"}, {"logo": "notebooklm", "label": "NotebookLM"}]},
+    {"type": "section", "at": "w:10", "until": "w:18", "n": 1, "of": 3, "label": "Escribe y programa"},
+    {"type": "app", "at": "w:12", "until": "w:18", "logo": "claude", "name": "Claude", "sub": "Anthropic · plan gratis", "price": "$0", "per": "para empezar"},
+    {"type": "chat", "at": "w:13", "until": "w:18", "title": "Claude", "logo": "claude", "messages": [{"who": "user", "text": "Hazme la landing de mi negocio"}, {"who": "ai", "text": "Listo: HTML, estilos y textos ✓", "at": "w:16"}]},
+    {"type": "section", "at": "w:18", "until": "w:27", "n": 2, "of": 3, "label": "Gratis con Google"},
+    {"type": "app", "id": "gem", "at": "w:20", "until": "w:27", "logo": "googlegemini", "name": "Gemini", "sub": "Google · tu cuenta de siempre", "price": "$19.99", "per": "al mes", "states": [{"at": "w:21", "state": "gratis"}]},
+    {"type": "badge", "at": "w:22", "until": "w:27", "text": "GRATIS", "attach": "gem", "corner": [0.18, 0], "anchor": [0.5, 0.75], "tilt": -7},
+    {"type": "section", "at": "w:27", "until": "w:41", "n": 3, "of": 3, "label": "Resume documentos"},
+    {"type": "logo", "at": "w:30", "until": "w:34", "logo": "notebooklm", "name": "NotebookLM", "size": 200},
+    {"type": "checklist", "at": "w:34", "until": "w:41", "title": "Resumen · contrato.pdf", "items": ["Duración: 12 meses", "Pago: $2,500 al mes", "Penalización: 10%"], "every": 0.35},
+    {"type": "cta", "at": "w:41", "until": "end", "keyword": "IA", "text": "y te mando los links", "sub": "de las 3 apps"}
+  ]
+}
