@@ -15,6 +15,10 @@ from .util import at, clamp, ease_in_out, lerp, smooth
 
 MODES = ("full", "split", "sticker", "popout", "pip", "broll")
 DEFAULT_TRANS = 0.32
+# how a layout change animates: morph (interpolate the geometry), zoom (push in + radial blur, cut at the
+# midpoint) or slide (the new layout pushes the old one off the screen)
+TRANSITIONS = {"morph": DEFAULT_TRANS, "zoom": 0.42, "slide": 0.45}
+SLIDE_DIRS = {"left": (-1, 0), "right": (1, 0), "up": (0, -1), "down": (0, 1)}
 
 
 def zone(mode, W, H, opt=None):
@@ -45,6 +49,8 @@ def resolve(plan_layout, words, duration, W, H, default="sticker"):
         mode = k.get("mode", default)
         if mode not in MODES:
             raise SystemExit(f"layout: modo «{mode}» no existe (usa {', '.join(MODES)})")
+        if k.get("transition", "morph") not in TRANSITIONS:
+            raise SystemExit(f"layout: transición «{k['transition']}» no existe (usa {', '.join(TRANSITIONS)})")
         t0 = at(k.get("at", 0), words, duration)
         opt = {kk: v for kk, v in k.items() if kk not in ("at", "mode")}
         segs.append({"t0": max(0.0, t0), "mode": mode, "opt": opt})
@@ -186,12 +192,22 @@ class Speaker:
         cur = self.segs[k]
         P = self.mode_params(cur["mode"], cur["opt"], i, t)
         P["mode"] = cur["mode"]
-        trans = cur["opt"].get("trans", DEFAULT_TRANS)
+        kind = cur["opt"].get("transition", "morph")
+        trans = cur["opt"].get("trans", TRANSITIONS.get(kind, DEFAULT_TRANS))
         if k > 0 and trans > 0 and t - cur["t0"] < trans:
             prev = self.segs[k - 1]
             Q = self.mode_params(prev["mode"], prev["opt"], i, t)
-            e = ease_in_out((t - cur["t0"]) / trans)
-            P = blend(Q, P, e)
+            Q["mode"] = prev["mode"]
+            x = (t - cur["t0"]) / trans
+            if kind == "zoom":
+                P = dict(Q if x < 0.5 else P, zoomfx=x)       # the blur hides the hard switch
+            elif kind == "slide":
+                ux, uy = SLIDE_DIRS.get(cur["opt"].get("dir", "left"), (-1, 0))
+                e = ease_in_out(x)
+                P = dict(P, shift=((1 - e) * -ux * self.W, (1 - e) * -uy * self.H),
+                         also=dict(Q, shift=(e * ux * self.W, e * uy * self.H)))
+            else:
+                P = blend(Q, P, ease_in_out(x))
         return P
 
 

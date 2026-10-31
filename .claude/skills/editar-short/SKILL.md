@@ -1,6 +1,6 @@
 ---
 name: editar-short
-description: Edita un video vertical (o horizontal) para YouTube Shorts, Reels o TikTok. Corta pausas y muletillas y pone subtítulos palabra por palabra. Recorta a la persona con borde blanco y agrega tarjetas animadas con logos de marcas, gancho, secciones numeradas, efectos de sonido y CTA final («Comenta PALABRA»). Úsala cuando el usuario pase un video (.mp4/.mov) y pida editarlo, hacerlo short o ponerle subtítulos, logos o tarjetas, o cuando diga «edítalo como los de IA» o «como @soyalonso.ai».
+description: Edita un video vertical (o horizontal) para YouTube Shorts, Reels o TikTok. Corta pausas y muletillas y pone subtítulos palabra por palabra. Recorta a la persona con borde blanco sobre un fondo estilo iOS y agrega tarjetas y motion graphics animados (notificaciones, iMessage, anillos, gráficas, odómetro, corazones, confeti, palabra golpe) con logos de marcas, gancho, secciones numeradas, efectos de sonido y CTA final («Comenta PALABRA»). Úsala cuando el usuario pase un video (.mp4/.mov) y pida editarlo, hacerlo short o ponerle subtítulos, logos o tarjetas, o cuando diga «edítalo como los de IA» o «como @soyalonso.ai».
 ---
 
 # Editar un Short
@@ -49,21 +49,24 @@ Crea `plan.json` junto al video, o en `work/<nombre>/plan.json`. El ejemplo comp
 {
   "work": "work/mi-short",
   "output": "out/mi-short.mp4",
-  "theme": "claro",
+  "theme": "ios",
   "fixes": {"Cloud": "Claude"},
   "captions": {"emphasis": ["gratis", "Claude"]},
   "layout": [
     {"at": 0, "mode": "full"},
-    {"at": "w:14", "mode": "sticker"},
-    {"at": "w:120", "mode": "full"}
+    {"at": "w:14", "mode": "sticker", "transition": "zoom"},
+    {"at": "w:120", "mode": "full", "transition": "slide"}
   ],
   "zooms": [{"at": "w:33", "scale": 1.12}],
   "overlays": [
     {"type": "hook", "at": 0, "until": "w:9", "lines": ["Deja de pagar $900", "por estas 5 apps"]},
     {"type": "section", "at": "w:14", "until": "w:60", "n": 1, "of": 5, "label": "Edición de fotos"},
+    {"type": "notif", "at": "w:16", "logo": "photoshop", "title": "Adobe", "text": "Tu suscripción se renueva: $22.99"},
     {"type": "app", "at": "w:16", "until": "w:60", "logo": "photoshop", "name": "Photoshop", "price": "$22.99", "per": "al mes",
      "states": [{"at": "w:30", "state": "cancelado"}]},
-    {"type": "repo", "at": "w:40", "until": "w:60", "repo": "GNOME/gimp", "stars": "5,812", "badge": "$0"},
+    {"type": "punch", "at": "w:30", "text": "Cancelado"},
+    {"type": "repo", "id": "gimp", "at": "w:40", "until": "w:60", "repo": "GNOME/gimp", "stars": "5,812", "badge": "$0"},
+    {"type": "confetti", "at": "w:41", "attach": "gimp", "corner": [0.85, 0.3]},
     {"type": "cta", "at": "w:118", "until": "end", "keyword": "REPOS", "text": "y te mando los 5 links"}
   ]
 }
@@ -91,6 +94,8 @@ Salen del análisis de @soyalonso.ai. Ver `docs/estilo-referencia.md`.
    - `split` (mitad y mitad) o `popout` (marco con la cabeza saliéndose, con `"outline": true` para borde blanco solo afuera) para variar.
    - `pip` para una demo a pantalla completa con la cara en una esquina.
 3. **Ritmo del diseño.** Cambia de modo cada 6–12 s, nunca antes de 2 s.
+   - Transición por defecto: el marco se transforma (`morph`).
+   - Para variar, en la clave de `layout`: `"transition": "zoom"` (zoom con desenfoque, ideal para entrar a un remate) o `"transition": "slide"` (el diseño nuevo empuja al anterior; `"dir": "left"|"right"|"up"|"down"`). Máximo una de cada 3 transiciones debería ser `zoom`.
 4. **Una tarjeta por idea, sincronizada con la palabra.**
    - Entra en la palabra clave (`"at": "w:N"`) y sale cuando cambia el tema.
    - Que no haya más de 2–3 tarjetas visibles a la vez: se apilan solas en la zona gráfica.
@@ -116,17 +121,32 @@ Salen del análisis de @soyalonso.ai. Ver `docs/estilo-referencia.md`.
     - Salen solos (2–3 palabras) y nunca tapan la cara.
     - Pon en `captions.emphasis` las marcas y palabras clave, que salen en color de acento. Los números se resaltan solos.
     - Se silencian durante el `hook` y el `cta`.
-11. **Cierre.** Usa `cta` con la palabra exacta que dice la persona («Comenta **REPOS**…») desde que la empieza a decir hasta `"end"`.
-12. **Zonas seguras de Shorts.** El 20% inferior y la franja derecha los tapan los botones y el título de YouTube. El motor ya ubica todo fuera, pero si usas `x`/`y` a mano, mantente entre y = 200 y 1550 y x < 920.
-13. **Duración.** Ideal 30–60 s. Si después de los cortes pasa de 60 s, propón al usuario qué quitar antes de renderizar.
+11. **Cierre.** Usa `cta` con la palabra exacta que dice la persona («Comenta **REPOS**…») desde que la empieza a decir hasta `"end"`. En el tema `ios` la palabra va con el degradado de Instagram.
+12. **Motion graphics (densidad).** Es lo que hace que el video se sienta vivo. Reglas:
+    - **Un cambio visual cada 1–2 s, siempre amarrado a una palabra** (`"at": "w:N"`): una tarjeta que entra, un número que cuenta, un interruptor que se enciende, un subrayado…
+    - **Una «palabra golpe» (`punch`) por idea principal**: la palabra clave gigante a pantalla completa por ~0,6 s, justo cuando se dice. No más de una cada ~8 s.
+    - **Partículas (`confetti`, `sparkle`, `hearts`) en dinero o «gratis»**: `confetti` o `sparkle` pegado (`attach`) a la tarjeta del «$0», `hearts` cuando algo «encanta».
+    - **Una notificación (`notif`) cuando se menciona una app**, con su logo, en la palabra exacta. Si la app ya tiene tarjeta, la notificación va antes.
+    - **Máximo 3 gráficos a la vez**, nunca sobre la cara y siempre dentro de las zonas seguras (abajo). Las partículas de `confetti` caen detrás de la persona; `hearts` sube por la derecha, fuera de la cara.
+    - Qué usar para cada cosa:
+      - App mencionada → `notif` (+ `app`/`logo`). Varias apps → `homescreen`.
+      - Conversación o «le escribes y te contesta» → `imessage` (con «escribiendo…»).
+      - «Actívalo», «enciende», «modo X» → `toggle`.
+      - Porcentajes o metas → `rings`. Crecimiento o comparación en el tiempo → `chart` (`"kind": "bar"` o `"line"`).
+      - Precio o ahorro grande → `odometer`. Dato rápido («subiendo…», «100%») → `island`.
+      - Mostrar una app o una web en el celular → `iphone` con una captura que hace scroll.
+      - La frase clave → `marker` (subrayado o marcador) o `captions.marker` para subrayarla en los subtítulos.
+13. **Zonas seguras de Shorts.** El 20% inferior y la franja derecha los tapan los botones y el título de YouTube. El motor ya ubica todo fuera, pero si usas `x`/`y` a mano, mantente entre y = 200 y 1550 y x < 920.
+14. **Duración.** Ideal 30–60 s. Si después de los cortes pasa de 60 s, propón al usuario qué quitar antes de renderizar.
 
 ### Temas
 
+- `ios` (**predeterminado**): gris de app de iOS (`#F2F2F7`) con una cuadrícula de puntos que sube despacio (con parallax), tarjetas blancas con esquinas de iOS, tipografía de Apple (SF Pro en Mac; Inter en Linux y Windows), acento rosa de Instagram `#FF0069`, el degradado de Instagram solo en destacados (palabra del CTA, badges y anillos), rojo y verde de iOS para tachados y palomitas. Los subtítulos marcan las palabras clave en rosa.
 - `claro`: papel crema con cuadrícula y acento lima.
 - `oscuro`: carbón con puntos y acento lima.
 - `tonyciencia`: la marca del usuario. Ámbar `#C8922A`, esquinas duras, sombras pixel y fuente pixel en etiquetas.
 
-Para personalizar: `{"base": "oscuro", "accent": "#FF5A1F"}`.
+Para personalizar: `{"base": "oscuro", "accent": "#FF5A1F"}`. El fondo de `ios` también: `{"base": "ios", "bg": {"scroll": -25, "parallax": 0}}` (ver `reference.md`).
 
 ## 3 · Render
 
@@ -149,6 +169,7 @@ python -m shorts qa out/mi-short.mp4    # hoja de contactos cada 2 s + loudness
 ```
 
 Abre el `*_qa.jpg` y comprueba:
+- [ ] Hay un cambio visual cada 1–2 s y ninguna parte del video se queda quieta más de ~3 s.
 - [ ] El gancho se lee en el primer cuadro, sin cortarse ni salirse.
 - [ ] Ninguna tarjeta tapa la cara, y los subtítulos no caen en los recuadros rojos (zona de YouTube).
 - [ ] Cada logo corresponde a lo que se dice en ese momento y no hay texto mal escrito (sobre todo marcas).
@@ -172,3 +193,5 @@ Pasa el MP4 al usuario. Resume en 3–5 líneas qué se cortó y qué tarjetas o
 | Recorte con fondo pegado | quita `--fast`; fondos lisos y buena luz ayudan mucho |
 | Colores lavados (iPhone HDR) | se convierte solo a SDR si ffmpeg tiene `zscale` (`doctor` lo revisa) |
 | Render lento | `--draft` para iterar; `--jobs N` para usar más núcleos |
+| El fondo no se mueve | solo el tema `ios` lo trae; en otro tema agrega `"bg": {"scroll": 30}` (y `"parallax": 0.5`) |
+| Demasiados gráficos o se tapan | máximo 3 a la vez; separa los `at` 1–2 s y quita partículas que no caigan en dinero o «gratis» |

@@ -40,6 +40,7 @@ class Pages:
         self._pw = sync_playwright().start()
         self.browser = self._pw.chromium.launch(**chromium_args())
         self.pages, self.prev, self.cdp = {}, {}, {}
+        self.size = (round(1080 * scale), round(1920 * scale))
         for layer, path in html_paths.items():
             pg = self.browser.new_page(viewport={"width": 1080, "height": 1920}, device_scale_factor=scale)
             errs = []
@@ -70,6 +71,8 @@ class Pages:
             else:
                 data = self.cdp[layer].send("Page.captureScreenshot", {"format": "png", "optimizeForSpeed": True})["data"]
                 img = cv2.imdecode(np.frombuffer(base64.b64decode(data), np.uint8), cv2.IMREAD_UNCHANGED)
+                if (img.shape[1], img.shape[0]) != self.size:      # some Chromium builds ignore a scale < 1 (draft)
+                    img = cv2.resize(img, self.size, interpolation=cv2.INTER_AREA)
                 out[layer] = img[..., [2, 1, 0, 3]] if img.shape[2] == 4 else np.dstack([img[..., ::-1], np.full(img.shape[:2], 255, np.uint8)])
                 self.prev[layer] = sig
         return out

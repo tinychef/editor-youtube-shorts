@@ -41,12 +41,13 @@ def apply_fixes(words, fixes, replace=()):
 def build(words, style, duration, mute=()):
     """→ {"chunks": [{t0, t1, words: [{w, t0, t1, e}]}], "mute": [[a, b]], "style": {...}}"""
     st = {"max_words": 3, "max_chars": 20, "emphasis": [], "auto_emphasis": True, "case": None, "strip": ".,;:",
-          "karaoke": False, "pop": True}
+          "karaoke": False, "pop": True, "marker": []}
     st.update(style or {})
     if st.get("enabled") is False or not words:
         return {"chunks": [], "mute": [], "style": st}
     emph = {_norm(x) for x in st["emphasis"] for x in [x] if x}
     emph_phr = [x for x in st["emphasis"] if " " in x]
+    marked = {_norm(x) for x in st["marker"] if x}
     chunks, cur = [], []
 
     def close():
@@ -67,19 +68,22 @@ def build(words, style, duration, mute=()):
         chars = sum(len(x["w"]) + 1 for x in cur) + len(disp)
         if cur and (len(cur) >= st["max_words"] or chars > st["max_chars"] or gap > 0.32):
             close()
-        cur.append({"w": disp, "t0": w["s"], "t1": w["e"], "e": is_e})
+        cur.append({"w": disp, "t0": w["s"], "t1": w["e"], "e": is_e, "m": n in marked})
         if PUNCT_END.search(txt) and txt[-1] in ".!?…:":
             close()
     close()
-    # emphasis by phrase ("código abierto")
-    for ph in emph_phr:
+    # emphasis (and marker) by phrase ("código abierto")
+    for ph in emph_phr + [x for x in st["marker"] if " " in x]:
         toks = [_norm(x) for x in ph.split()]
         for ch in chunks:
             ns = [_norm(x["w"]) for x in ch]
             for k in range(len(ns) - len(toks) + 1):
                 if ns[k:k + len(toks)] == toks:
                     for x in ch[k:k + len(toks)]:
-                        x["e"] = True
+                        if ph in st["marker"]:
+                            x["m"] = True
+                        else:
+                            x["e"] = True
     out = []
     for k, ch in enumerate(chunks):
         t0 = ch[0]["t0"]

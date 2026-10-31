@@ -114,6 +114,54 @@ def synth(name, dur=0.0):
         y = lfilter(b, a, sq).astype(np.float32)
         gate = ((np.arange(n) / SR) % 0.11 < 0.075).astype(np.float32)
         return y * gate * _env(n, 0.003 * SR, 0)
+    if name == "haptic":          # Taptic-style tap: a short, low, rounded knock
+        n = int(0.06 * SR)
+        y = _sine(n, 210, 120) * _env(n, 0.0015 * SR, 0.012 * SR)
+        y += 0.35 * _sine(n, 1800) * _env(n, 1, 0.0018 * SR)
+        return y
+    if name == "softpop":         # gentle pop for icons and particles
+        n = int(0.1 * SR)
+        y = _sine(n, 900, 520) * _env(n, 0.004 * SR, 0.022 * SR)
+        return y + 0.12 * _bandnoise(n, 1500, 5000) * _env(n, 1, 0.004 * SR)
+    if name == "bubble":          # message bubble: a quick rising «bloop»
+        n = int(0.16 * SR)
+        x = np.arange(n) / SR
+        f = 420 + 1200 * (1 - np.exp(-x / 0.03))
+        y = np.sin(2 * np.pi * np.cumsum(f) / SR).astype(np.float32) * _env(n, 0.003 * SR, 0.045 * SR)
+        return y + 0.18 * _bandnoise(n, 2500, 8000, 4000, 10000) * _env(n, 1, 0.01 * SR)
+    if name == "sparkle":         # shimmer: a cascade of tiny high bells
+        rng = np.random.default_rng(3)
+        n = int(0.9 * SR)
+        y = np.zeros(n, np.float32)
+        for j in range(9):
+            k = int(j * 0.045 * SR)
+            b = _bell(0.5, 2093 * 2 ** (rng.integers(0, 12) / 12), 0.9 - 0.07 * j)
+            y[k:k + len(b)] += b[: n - k]
+        y += 0.25 * _bandnoise(n, 6000, 14000) * _env(n, 0.02 * SR, 0.18 * SR)
+        return y / 2.2
+    if name == "notif":           # soft two-note chime
+        n = int(0.9 * SR)
+        y = np.zeros(n, np.float32)
+        a, b = _bell(0.6, 1318.5), _bell(0.75, 1975.5)
+        y[: len(a)] += a
+        k = int(0.11 * SR)
+        y[k:k + len(b)] += 0.9 * b[: n - k]
+        return y / 1.7
+    if name == "ratchet":         # odometer wheels: ticks that slow down
+        d = max(0.3, dur)
+        n = int(d * SR)
+        y = np.zeros(n + SR // 10, np.float32)
+        t = 0.0
+        while t < d:
+            k, m = int(t * SR), int(0.012 * SR)
+            y[k:k + m] += (_sine(m, 3000) * 0.6 + 0.4 * _bandnoise(m, 2000, 8000)) * _env(m, 1, 0.002 * SR)
+            t += 0.03 + 0.16 * (t / d) ** 2
+        return y[:n]
+    if name == "marker":          # felt-tip stroke
+        n = int(0.3 * SR)
+        x = np.linspace(0, 1, n)
+        e = (np.sin(np.pi * x) ** 0.6 * (0.75 + 0.25 * np.sin(2 * np.pi * 23 * x))).astype(np.float32)
+        return _bandnoise(n, 1800, 6500, 2400, 8000) * e
     if name == "success":
         a = _bell(0.6, 1046.5)
         b = _bell(0.8, 1568)
@@ -126,7 +174,8 @@ def synth(name, dur=0.0):
 
 
 GAIN_DB = {"pop": -17, "whoosh": -21, "swoosh": -23, "rise": -22, "click": -18, "tick": -27, "type": -24, "count": -28,
-           "ding": -19, "cash": -17, "thump": -12, "buzz": -26, "success": -19}
+           "ding": -19, "cash": -17, "thump": -12, "buzz": -26, "success": -19,
+           "haptic": -17, "softpop": -21, "bubble": -19, "sparkle": -18, "notif": -20, "ratchet": -27, "marker": -25}
 
 
 def sfx_track(events, duration, volume=1.0, t_from=0.0):
@@ -138,7 +187,7 @@ def sfx_track(events, duration, volume=1.0, t_from=0.0):
         name, t = ev["sfx"], ev["t"] - t_from
         if name not in GAIN_DB or t < -0.05 or t > duration:
             continue
-        if t - last.get(name, -9) < (0.06 if name in ("pop", "tick") else 0.12):   # avoid machine-gun stacking
+        if t - last.get(name, -9) < (0.06 if name in ("pop", "tick", "softpop", "haptic") else 0.12):   # no machine-gun stacking
             continue
         last[name] = t
         y = synth(name, ev.get("dur", 0.0)) * (10 ** (GAIN_DB[name] / 20)) * volume

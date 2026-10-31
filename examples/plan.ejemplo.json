@@ -1,7 +1,7 @@
 {
   "work": "../work/apps-gratis",
   "output": "../out/apps-gratis.mp4",
-  "theme": "claro",
+  "theme": "ios",
   "fixes": {"Cloud": "Claude", "Gip": "GIMP", "reempezar": "reemplazar", "Midly": "Meetily"},
   "captions": {
     "emphasis": ["gratis", "GIMP", "Meetily", "código abierto", "repos"],
@@ -9,10 +9,10 @@
   },
   "layout": [
     {"at": 0, "mode": "full"},
-    {"at": "w:19", "mode": "sticker"},
+    {"at": "w:19", "mode": "sticker", "transition": "zoom"},
     {"at": "w:69", "mode": "popout", "outline": true},
     {"at": "w:126", "mode": "split"},
-    {"at": "w:150", "mode": "broll"},
+    {"at": "w:150", "mode": "broll", "transition": "slide"},
     {"at": "w:177", "mode": "sticker"},
     {"at": "w:209", "mode": "full"}
   ],
@@ -27,11 +27,14 @@
       {"logo": "asana", "label": "$13.49"}, {"logo": "bitly", "label": "$29"}, {"logo": "1password", "label": "$3.99"}]},
 
     {"type": "section", "at": "w:19", "until": "w:69", "n": 1, "of": 5, "label": "Edición de fotos"},
+    {"type": "notif", "at": "w:21", "logo": "photoshop", "title": "Adobe", "text": "Tu suscripción se renueva: $22.99 al mes"},
     {"type": "app", "id": "ps", "at": "w:21", "until": "w:69", "logo": "photoshop", "name": "Photoshop",
      "sub": "Adobe · plan individual", "price": "$22.99", "per": "al mes", "states": [{"at": "w:36", "state": "cancelado"}]},
     {"type": "repo", "id": "gimp", "at": "w:42", "until": "w:69", "repo": "GNOME/gimp", "desc": "Editor de imágenes libre y gratuito",
      "license": "GPL-3.0", "badge": "$0"},
     {"type": "badge", "at": "w:47", "until": "w:69", "text": "CÓDIGO ABIERTO", "attach": "gimp", "corner": [0.2, 0], "anchor": [0.5, 0.7], "size": 30},
+    {"type": "punch", "at": "w:36", "text": "Cancelado"},
+    {"type": "confetti", "at": "w:43", "attach": "gimp", "corner": [0.85, 0.3]},
     {"type": "stamp", "at": "w:65", "dur": 1.3, "text": "Rateros", "x": 760, "y": 330},
 
     {"type": "section", "at": "w:69", "until": "w:126", "n": 2, "of": 5, "label": "Transcribir reuniones"},
@@ -58,6 +61,7 @@
               {"logo": "asana", "name": "Asana", "value": "$13.49"}, {"logo": "bitly", "name": "Bitly", "value": "$29"},
               {"logo": "1password", "name": "1Password", "value": "$3.99"}],
      "total": {"label": "Total / mes", "value": "$86.46"}, "strike": "w:192", "savings": {"label": "AHORRO / AÑO", "value": "$1,037"}},
+    {"type": "punch", "at": "w:198", "text": "$0"},
 
     {"type": "cta", "at": "w:215", "until": "end", "keyword": "REPOS", "text": "y te mando los 5 repositorios", "sub": "+ cómo instalarlos"}
   ]

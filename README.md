@@ -3,8 +3,9 @@
 Le pasas un video tuyo hablando a cámara a Claude y te devuelve un Short editado al nivel de los creadores de IA. El editor:
 - quita pausas y muletillas;
 - pone subtítulos palabra por palabra con las palabras clave en color;
-- te recorta **con borde blanco** sobre un fondo de marca;
+- te recorta **con borde blanco** sobre un fondo estilo iOS con puntitos que se mueven;
 - agrega tarjetas animadas con **logos** de cada herramienta que mencionas, con precios que se tachan, repos de GitHub, terminal y chat;
+- suma **motion graphics** estilo iOS e Instagram: notificaciones, iMessage con «escribiendo…», interruptores, anillos, gráficas, odómetro de precios, corazones, confeti y la «palabra golpe»;
 - pone un gancho al inicio, secciones numeradas y el «Comenta PALABRA» del final;
 - suma efectos de sonido y deja el audio a -14 LUFS.
 
@@ -19,7 +20,7 @@ Le pasas un video tuyo hablando a cámara a Claude y te devuelve un Short editad
    - renderiza y revisa la hoja de contactos;
    - te entrega el MP4.
 
-Puedes pedirle cambios en lenguaje normal: «usa el tema oscuro», «más tarjetas», «que la palabra del final sea GUÍA», «saca la parte donde me equivoqué».
+Puedes pedirle cambios en lenguaje normal: «usa el tema oscuro», «más tarjetas», «más motion graphics», «que la palabra del final sea GUÍA», «saca la parte donde me equivoqué».
 
 ## Instalación
 
@@ -102,19 +103,22 @@ python -m shorts prepare videos/mi-video.mp4 --name mi-video --drop "40-58" --re
 | `pip` | gráficos a pantalla completa y tú en un círculo |
 | `broll` | solo gráficos |
 
-Los cambios entre diseños son animados: el marco se encoge, el fondo se desvanece y aparece el borde.
+Los cambios entre diseños son animados: el marco se encoge, el fondo se desvanece y aparece el borde. También hay dos transiciones más: **zoom con desenfoque** (`"transition": "zoom"`) y **deslizamiento** (`"transition": "slide"`, con `"dir"`).
 
 ## Temas
 
-![Las mismas tarjetas en los temas claro, oscuro y tonyciencia](docs/temas.jpg)
+![Las mismas tarjetas en los temas ios, claro, oscuro y tonyciencia](docs/temas.jpg)
 
 | tema | qué es |
 |---|---|
+| `ios` | **predeterminado.** Gris de app de iOS (`#F2F2F7`) con puntitos que suben despacio y una segunda capa más tenue en parallax; tarjetas blancas con esquinas de iOS; tipografía de Apple; rosa de Instagram (`#FF0069`) de acento y su degradado en la palabra del CTA, los badges y los anillos |
 | `claro` | crema con cuadrícula y acento lima |
 | `oscuro` | carbón con puntos y acento lima |
 | `tonyciencia` | ámbar de la marca, esquinas duras, sombras pixel y etiquetas en fuente pixel |
 
-Para cualquier otro color: `"theme": {"base": "oscuro", "accent": "#FF5A1F"}`.
+Para cualquier otro color: `"theme": {"base": "oscuro", "accent": "#FF5A1F"}`. El fondo de `ios` se configura con `bg.scroll` (px/s; negativo = hacia abajo), `bg.cell`, `bg.dot` y `bg.parallax`, por ejemplo `"theme": {"base": "ios", "bg": {"scroll": 20, "parallax": 0}}`.
+
+**Tipografía del tema ios:** usa la del sistema (`-apple-system`, SF Pro Display / SF Pro Text). En un Mac se ve con SF Pro; en Linux o Windows (y en la nube) cae en Inter, que viene incluida y es casi idéntica. SF Pro no se incluye porque la licencia de Apple no permite redistribuirla.
 
 ## Tarjetas disponibles
 
@@ -141,6 +145,28 @@ Para cualquier otro color: `"theme": {"base": "oscuro", "accent": "#FF5A1F"}`.
 | `image` | una imagen tuya |
 | `html` | cualquier tarjeta a medida (Claude la diseña) |
 
+## Motion graphics
+
+![Notificación, iMessage, interruptores, anillos, gráficas, odómetro, confeti, palabra golpe, marcador, pantalla de inicio, Dynamic Island y iPhone](docs/motion-graphics.jpg)
+
+| componente | qué hace |
+|---|---|
+| `notif` | notificación de iOS que baja desde arriba, con el ícono de la app |
+| `imessage` | chat tipo iMessage con «escribiendo…» (tres puntos que rebotan) antes de cada burbuja |
+| `toggle` | interruptores de iOS que se encienden |
+| `rings` | anillos de progreso que se llenan con el degradado de Instagram |
+| `chart` | gráfica de barras o de línea que se dibuja, con números que cuentan |
+| `odometer` | contador tipo odómetro para precios |
+| `hearts` | corazones o emojis que suben flotando, como en un live de Instagram |
+| `confetti`, `sparkle` | explosión de confeti o destellos (para «gratis» o «$0») |
+| `punch` | «palabra golpe»: la palabra clave gigante a pantalla completa por ~0,6 s |
+| `marker` | subrayado o marcador que se dibuja bajo una palabra (también en subtítulos con `captions.marker`) |
+| `homescreen` | íconos de apps que rebotan en una pantalla de inicio |
+| `island` | píldora Dynamic Island que se expande con un dato |
+| `iphone` | un iPhone con una captura que hace scroll |
+
+Cada uno trae su efecto de sonido sintetizado (tick háptico, pop suave, burbuja de mensaje, destello…). Todos son funciones puras del tiempo y las partículas usan semillas fijas, así que cada render sale idéntico. La skill le pide a Claude un cambio visual cada 1–2 s amarrado a una palabra, una «palabra golpe» por idea, partículas en dinero o «gratis», una notificación cuando se menciona una app y nunca más de 3 gráficos a la vez ni sobre la cara.
+
 Referencia completa: [`.claude/skills/editar-short/reference.md`](.claude/skills/editar-short/reference.md). Guía de estilo y métricas del análisis: [`docs/estilo-referencia.md`](docs/estilo-referencia.md).
 
 **Logos:** salen solos por nombre (`"claude"`, `"chatgpt"`, `"photoshop"`, `"notion"`…), por dominio (`"meetily.ai"`) o desde tus archivos en `logos/` junto al plan. Pruébalos con `python -m shorts logo claude excel canva`.
@@ -164,8 +190,8 @@ Con GPU NVIDIA, la transcripción usa CUDA automáticamente.
 
 ## Licencias y créditos
 
-- **Fuentes:** Montserrat, Inter, JetBrains Mono y Silkscreen, bajo SIL Open Font License 1.1 (`assets/fonts/OFL-*.txt`).
+- **Fuentes:** Montserrat, Inter, JetBrains Mono y Silkscreen, bajo SIL Open Font License 1.1 (`assets/fonts/OFL-*.txt`). El tema `ios` pide SF Pro al sistema (solo existe en Macs); sus archivos no se incluyen.
 - **Logos:** [Simple Icons](https://simpleicons.org) (CC0). Las marcas son de sus dueños; úsalas para referirte a sus productos.
 - **Modelos:** MediaPipe Selfie/Multiclass segmentation y BlazeFace (Apache 2.0), y Whisper vía faster-whisper (MIT). Se descargan aparte.
 - **Sonido:** todos los efectos se sintetizan en `shorts/audio.py`, sin muestras de terceros.
-- **Contenido de terceros:** no se incluyen los videos analizados de otros creadores.
+- **Contenido de terceros:** no se incluyen los videos analizados de otros creadores. Las imágenes de `docs/` salen del editor en modo `broll`, sin personas.

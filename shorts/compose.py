@@ -1,4 +1,6 @@
 """Frame compositor: background → cards (under) → speaker (frame / cut-out + white border) → captions (over)."""
+import math
+
 import cv2
 import numpy as np
 
@@ -69,10 +71,22 @@ class Overlay:
         np.add(c, self.pm, out=c)
 
 
+def _shifted(P):
+    """Layout params moved by P["shift"] (slide transitions)."""
+    sx, sy = P.get("shift", (0.0, 0.0))
+    if not sx and not sy:
+        return P
+    x, y, w, h = P["rect"]
+    return {**P, "ax": P["ax"] + sx, "ay": P["ay"] + sy, "rect": (x + sx, y + sy, w, h)}
+
+
 class Composer:
     def __init__(self, W, H, bg, theme, src_size, matte_size, scale=1.0):
+        """bg: a themes.Backdrop (animated or not) or a static float RGB image (0..1)."""
         self.W, self.H, self.k = W, H, scale
-        self.bg = (bg * 255).astype(np.float32)
+        if isinstance(bg, np.ndarray):
+            bg = _Static((bg * 255).astype(np.float32))
+        self.bg = bg
         self.Sw, self.Sh = src_size
         self.mw, self.mh = matte_size
         sp = theme["speaker"]
@@ -88,6 +102,7 @@ class Composer:
     def speaker(self, canvas, frame, matte, P):
         """Draw the speaker onto canvas (float32 HxWx3, 0..1) in place."""
         k, W, H = self.k, self.W, self.H
+        P = _shifted(P)
         vis = P["vis"]
         if vis <= 0.002:
             return
@@ -204,12 +219,46 @@ class Composer:
             self._white[:] = self.outline_rgb
         return self._white
 
-    def frame(self, frame, matte, P, under, over, progress=None, prog_color=None):
-        canvas = self.bg.copy()
+    def frame(self, frame, matte, P, under, over, progress=None, prog_color=None, t=0.0):
+        canvas = self.bg.frame(t)
         under.apply(canvas)
+        if P.get("also"):                         # slide transition: the outgoing layout first
+            self.speaker(canvas, frame, matte, P["also"])
         self.speaker(canvas, frame, matte, P)
         over.apply(canvas)
         if progress is not None:
             h = max(2, int(10 * self.k))
             canvas[:h, : int(self.W * progress)] = prog_color * 255
+        if P.get("zoomfx") is not None:
+            canvas = self.zoom_blur(canvas, P["zoomfx"])
         return cv2.convertScaleAbs(canvas)
+
+    def zoom_blur(self, canvas, x):
+        """Zoom transition: the whole frame pushes in and radially blurs up to the cut (x = 0.5), then settles."""
+        bump = math.sin(math.pi * min(max(x, 0.0), 1.0))
+        if bump < 0.01:
+            return canvas
+        W, H = self.W, self.H
+        s = 1 + 0.18 * bump
+        M = cv2.getRotationMatrix2D((W / 2, H / 2), 0, s)
+        sharp = cv2.warpAffine(canvas, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+        # radial blur at quarter resolution: the average of slightly bigger copies of the frame
+        w4, h4 = max(2, W // 4), max(2, H // 4)
+        small = cv2.resize(canvas, (w4, h4), interpolation=cv2.INTER_AREA)
+        acc = np.zeros_like(small)
+        n = 6
+        for j in range(n):
+            Mj = cv2.getRotationMatrix2D((w4 / 2, h4 / 2), 0, s * (1 + 0.035 * bump * j))
+            acc += cv2.warpAffine(small, Mj, (w4, h4), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+        acc = cv2.GaussianBlur(acc * (1 / n), (0, 0), 1.0 + 2.5 * bump)
+        blur = cv2.resize(acc, (W, H), interpolation=cv2.INTER_LINEAR)
+        a = min(1.0, bump * 1.8)
+        return cv2.addWeighted(sharp, 1 - a, blur, a, 0)
+
+
+class _Static:
+    def __init__(self, img):
+        self.img = img
+
+    def frame(self, t):
+        return self.img.copy()

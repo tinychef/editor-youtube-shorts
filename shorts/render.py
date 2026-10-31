@@ -11,7 +11,7 @@ import numpy as np
 from . import audio, captions, layout, timeline
 from .compose import Composer, Overlay
 from .overlay import EMPTY, SAME, Pages, write_html
-from .themes import background, hex_rgb, theme
+from .themes import Backdrop, hex_rgb, theme
 from .util import W as CW, H as CH, at, log, read_json, run, slug, span, write_json
 from .videoio import Reader, Writer
 
@@ -27,7 +27,7 @@ def setup(plan_path, draft=False):
     meta, track = read_json(wd / "meta.json"), read_json(wd / "track.json")
     words = captions.apply_fixes(read_json(wd / "words.json"), plan.get("fixes"), (plan.get("captions") or {}).get("replace"))
     dur = meta["frames"] / meta["fps"]
-    th = theme(plan.get("theme", "claro"))
+    th = theme(plan.get("theme"))
     segs = layout.resolve(plan.get("layout"), words, dur, CW, CH, default=plan.get("default_layout", "sticker"))
     items, mutes = timeline.build(plan.get("overlays"), words, dur, segs, base, plan.get("logo_style", "tile"))
     cap_style = dict(plan.get("captions") or {})
@@ -104,7 +104,7 @@ class Frames:
         self.mat = Reader(Path(ctx["work"]) / "matte.mkv", tuple(ms), "gray", start=a / fps)
         self.sp = layout.Speaker(ctx["segs"], ctx["track"], (sw, sh), CW, CH, fps, ctx["meta"]["shots"], ctx["theme"],
                                  ctx["zooms"], ctx["plan"].get("cut_zoom"))
-        self.comp = Composer(self.W, self.H, background(ctx["theme"], self.W, self.H), ctx["theme"], (sw, sh), tuple(ms), k)
+        self.comp = Composer(self.W, self.H, Backdrop(ctx["theme"], self.W, self.H, k), ctx["theme"], (sw, sh), tuple(ms), k)
         self.pages = Pages(ctx["html"], scale=k)
         self.under, self.over = Overlay(), Overlay()
         pr = ctx["plan"].get("progress")
@@ -129,7 +129,7 @@ class Frames:
                 slot.set(r)
         P = self.sp.params(i)
         prog = (t / self.ctx["dur"]) if self.prog is not None else None
-        return self.comp.frame(v, m, P, self.under, self.over, prog, self.prog)
+        return self.comp.frame(v, m, P, self.under, self.over, prog, self.prog, t)
 
     def close(self):
         self.vid.close()
@@ -177,7 +177,7 @@ def render(plan_path, out=None, draft=False, t_from=None, t_to=None, frames=None
     events = pg.events()
     pg.close()
     for s in ctx["segs"][1:]:
-        events.append({"t": s["t0"], "sfx": "swoosh"})
+        events.append({"t": s["t0"], "sfx": "whoosh" if s["opt"].get("transition") == "zoom" else "swoosh"})
     sfx_cfg = ctx["plan"].get("sfx", {})
     for e in (sfx_cfg.get("extra", []) if isinstance(sfx_cfg, dict) else []):
         events.append({"t": at(e["at"], ctx["words"], ctx["dur"]), "sfx": e["name"], "dur": e.get("dur", 0)})

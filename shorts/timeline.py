@@ -1,4 +1,7 @@
 """Plan overlays → items the overlay runtime animates (resolved times, zones, logos, defaults)."""
+import re
+from pathlib import Path
+
 from . import logos as L
 from .util import at, span
 
@@ -28,10 +31,26 @@ T = {
     "cursor":    dict(layer="over", place="abs", inn=("fade", 0.15), out=("fade", 0.15), sfx=None, dur=1.2),
     "arrow":     dict(layer="over", place="full", inn=("none", 0.0), out=("fade", 0.2), sfx="swoosh", dur=1.8),
     "scrim":     dict(layer="over", place="full", inn=("fade", 0.3), out=("fade", 0.3), sfx=None, dur=2.6),
+    # motion graphics (iOS / Instagram); their sounds come from their animated parts
+    "notif":      dict(layer="over", place="top", inn=("drop", 0.5), out=("drop", 0.35), sfx="notif", dur=2.6),
+    "island":     dict(layer="over", place="top", inn=("fade", 0.12), out=("fade", 0.12), sfx=None, dur=2.6),
+    "imessage":   dict(layer="under", place="stack", inn=("up", 0.35), out=("fade", 0.22), sfx="whoosh", dur=4.5),
+    "toggle":     dict(layer="under", place="stack", inn=("up", 0.35), out=("fade", 0.22), sfx="whoosh", dur=2.6),
+    "rings":      dict(layer="under", place="stack", inn=("up", 0.35), out=("fade", 0.22), sfx="whoosh", dur=3.0),
+    "chart":      dict(layer="under", place="stack", inn=("up", 0.35), out=("fade", 0.22), sfx="whoosh", dur=3.5),
+    "odometer":   dict(layer="under", place="stack", inn=("pop", 0.3), out=("fade", 0.2), sfx="softpop", dur=3.0),
+    "homescreen": dict(layer="under", place="stack", inn=("none", 0.0), out=("fade", 0.22), sfx=None, dur=3.0),
+    "iphone":     dict(layer="under", place="stack", inn=("up", 0.45), out=("fade", 0.25), sfx="whoosh", dur=4.0),
+    "marker":     dict(layer="over", place="title", inn=("pop", 0.3), out=("fade", 0.2), sfx="softpop", dur=2.0),
+    "hearts":     dict(layer="over", place="full", inn=("none", 0.0), out=("none", 0.0), sfx=None, dur=2.6),
+    "confetti":   dict(layer="under", place="abs", inn=("none", 0.0), out=("none", 0.0), sfx=None, dur=1.8),
+    "sparkle":    dict(layer="under", place="abs", inn=("none", 0.0), out=("none", 0.0), sfx=None, dur=1.4),
+    "punch":      dict(layer="over", place="full", inn=("fade", 0.05), out=("fade", 0.1), sfx="thump", dur=0.6),
 }
 RESERVED = {"type", "at", "until", "dur", "layer", "place", "in", "out", "sfx", "x", "y", "anchor", "attach", "corner",
             "w", "dx", "dy", "id", "mute_captions", "zone"}
-TIME_KEYS = ("at", "strike", "badge_at", "scroll_at", "click_at")
+TIME_KEYS = ("at", "strike", "badge_at", "scroll_at", "click_at", "on_at", "roll_at", "draw_at", "open_at")
+MUTED = ("cta", "hook", "punch")          # captions are hidden while these are on screen
 
 
 def _localize(obj, t0, words, duration):
@@ -67,6 +86,18 @@ def _logos(p, base_dir, style):
     return q
 
 
+def _paths(p, base_dir):
+    """Image paths in props (src/image), relative to the plan → file:// URIs Chromium can open."""
+    for k in ("src", "image"):
+        v = p.get(k)
+        if isinstance(v, str) and v and not re.match(r"^(data|https?|file):", v):
+            f = Path(v).expanduser()
+            f = f if f.is_absolute() else Path(base_dir) / f
+            if f.exists():
+                p[k] = f.resolve().as_uri()
+    return p
+
+
 def build(overlays, words, duration, segs, base_dir, logo_style="tile"):
     items, mutes = [], []
     seg_at = lambda t: next((s for s in reversed(segs) if s["t0"] <= t + 1e-6), segs[0])
@@ -77,7 +108,7 @@ def build(overlays, words, duration, segs, base_dir, logo_style="tile"):
         t0, t1 = span(o, words, duration, default_dur=dflt)
         seg = seg_at(t0)
         props = {k: v for k, v in o.items() if k not in RESERVED}
-        props = _logos(_localize(props, t0, words, duration), base_dir, logo_style)
+        props = _paths(_logos(_localize(props, t0, words, duration), base_dir, logo_style), base_dir)
         if typ in ("repo",) and not props.get("logo"):
             props["logo"] = L.resolve("github", base_dir, logo_style)
         it = {
@@ -88,7 +119,9 @@ def build(overlays, words, duration, segs, base_dir, logo_style="tile"):
             "sfx": o.get("sfx", d["sfx"]), "props": props, "zone": {**seg["zone"], **o.get("zone", {})}, "zid": seg["zid"],
         }
         for k in ("x", "y", "anchor", "attach", "corner", "w", "dx", "dy"):
-            if k in o:
+            if k in o and typ == "hearts" and k in ("x", "y"):
+                props[k] = o[k]                  # where the hearts start, not where the full-screen layer goes
+            elif k in o:
                 it[k] = o[k]
         if typ == "hook" and seg["mode"] in ("full", "split") and props.get("style") != "box" and o.get("scrim", True):
             items.append({"id": f"scrim{n}", "type": "scrim", "t0": it["t0"], "t1": it["t1"], "layer": "over",
@@ -96,7 +129,9 @@ def build(overlays, words, duration, segs, base_dir, logo_style="tile"):
                           "props": {"side": "top", "height": 860}, "zone": it["zone"], "zid": it["zid"]})
         if typ == "title" and seg["zone"].get("capOn") == "bg":
             props.setdefault("style", "on-bg")
-        if o.get("mute_captions", typ in ("cta", "hook")):
+        if typ == "marker":
+            props.setdefault("on_bg", seg["mode"] in ("sticker", "pip", "broll"))
+        if o.get("mute_captions", typ in MUTED):
             mutes.append([it["t0"], it["t1"]])
         items.append(it)
     # attached items must be positioned after their targets
